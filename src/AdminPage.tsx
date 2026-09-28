@@ -7,6 +7,8 @@ import type { Song, UsageLabel } from "./types";
 
 const repoKey = "songbook-admin-repository";
 const tokenKey = "songbook-admin-token";
+const draftKey = (repo: GitHubRepository) =>
+  `songbook-admin-draft:${repo.owner.toLowerCase()}/${repo.name.toLowerCase()}`;
 const timestamp = () => new Date().toISOString();
 const repositoryHint = import.meta.env.VITE_GITHUB_REPOSITORY
   ? `https://github.com/${import.meta.env.VITE_GITHUB_REPOSITORY}`
@@ -80,11 +82,37 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     setMessage("");
     try {
       const connected = await connectRepository(url, accessToken);
+      let workingCatalog = connected.catalog;
+      let restoredNotes = "";
+      let hasDraft = false;
+      const savedDraft = localStorage.getItem(draftKey(connected.repo));
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft) as {
+            sha?: string;
+            catalog?: PublishedCatalog;
+            notesText?: string;
+          };
+          if (parsed.sha === connected.sha &&
+              Array.isArray(parsed.catalog?.songs) &&
+              Array.isArray(parsed.catalog?.cards)) {
+            workingCatalog = parsed.catalog;
+            restoredNotes = parsed.notesText ?? "";
+            hasDraft = true;
+            setMessage("已恢复这个浏览器里未发布的课程草稿。");
+          } else {
+            setMessage("GitHub 仓库已有新版本，本机旧草稿未自动覆盖最新课程。");
+          }
+        } catch {
+          setMessage("本机课程草稿无法读取，已载入 GitHub 上的最新课程。");
+        }
+      }
       setRepo(connected.repo);
-      setCatalog(connected.catalog);
+      setCatalog(workingCatalog);
       setSha(connected.sha);
-      setSelectedId(connected.catalog.songs[0]?.id ?? "");
-      setDirty(false);
+      setSelectedId(workingCatalog.songs[0]?.id ?? "");
+      setNotesText(restoredNotes);
+      setDirty(hasDraft);
       sessionStorage.setItem(tokenKey, accessToken.trim());
       localStorage.setItem(repoKey, `https://github.com/${connected.repo.owner}/${connected.repo.name}`);
     } catch (cause) {
@@ -101,6 +129,15 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     // Restore only once on entering the admin page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!repo || !catalog || !sha || (!dirty && !notesText.trim())) return;
+    try {
+      localStorage.setItem(draftKey(repo), JSON.stringify({ sha, catalog, notesText }));
+    } catch {
+      setError("浏览器无法保存草稿。请先发布课程，或检查浏览器存储空间。");
+    }
+  }, [repo, catalog, sha, dirty, notesText]);
 
   function disconnect() {
     sessionStorage.removeItem(tokenKey);
@@ -200,8 +237,10 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     setMessage("");
     try {
       const nextSha = await publishCatalog(repo, token, catalog, sha);
+      localStorage.removeItem(draftKey(repo));
       setSha(nextSha);
       setDirty(false);
+      setNotesText("");
       setMessage("课程已提交到 GitHub。Pages 会自动构建；完成后，刷新公开网站即可看到更新。");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "发布失败");
@@ -218,7 +257,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
         <div>
           <span className="eyebrow">EDITOR STUDIO</span>
           <h1>课程管理后台</h1>
-          <p>在这里整理歌曲和表达，再发布给所有学习者。未点击“发布课程”的改动只留在当前页面。</p>
+          <p>在这里整理歌曲和表达，再发布给所有学习者。未发布的课程草稿会自动保存在这个浏览器里。</p>
         </div>
         <button className="button subtle" onClick={onPublic}><ArrowLeft size={16} /> 查看学习界面</button>
       </div>
@@ -243,7 +282,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
         <>
           <div className="panel admin-status">
             <span>已连接：{repo.user} · {repo.owner}/{repo.name}</span>
-            <span>{dirty ? "有未发布改动" : "课程与仓库同步"}</span>
+            <span>{notesText.trim() ? "有尚未识别的笔记" : dirty ? "有未发布改动" : "课程与仓库同步"}</span>
             <button className="button text small" onClick={disconnect}>退出管理</button>
           </div>
           {catalog.songs.length === 0 && (
