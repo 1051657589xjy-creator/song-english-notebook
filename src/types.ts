@@ -33,7 +33,7 @@ export interface Card {
   example: string;
   notes: string;
   referenceUrl?: string;
-  sourceType?: "title" | "extension";
+  sourceType?: "title" | "song" | "extension";
   curated?: boolean;
   streak: number;
   nextReview: string;

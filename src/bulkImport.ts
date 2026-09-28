@@ -8,6 +8,7 @@ export interface ImportedCard {
   label: UsageLabel;
   example: string;
   notes: string;
+  sourceType?: "title" | "song" | "extension";
 }
 
 export interface ParseResult {
@@ -43,6 +44,7 @@ function fieldFor(label: string): keyof ImportedCard | undefined {
   if (/^(?:使用场景|场景|用法|scenario|usage)$/.test(key))
     return "scenario";
   if (/^(?:使用标签|标签|label)$/.test(key)) return "label";
+  if (/^(?:来源类型|来源|sourcetype)$/.test(key)) return "sourceType";
   if (/^(?:英文例句|我的例句|例句|example|sentence)$/.test(key))
     return "example";
   if (/^(?:备注|笔记|notes?|note)$/.test(key)) return "notes";
@@ -111,6 +113,8 @@ export function parseStudyNotes(text: string): ParseResult {
         } else {
           current ??= blankCard();
           if (field === "label") current.label = parseLabel(labeled[2]);
+          else if (field === "sourceType") current.sourceType = labeled[2].includes("歌名")
+            ? "title" : labeled[2].includes("歌曲") ? "song" : "extension";
           else current[field] = labeled[2].trim();
         }
         continue;

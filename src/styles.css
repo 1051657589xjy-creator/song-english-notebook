@@ -1959,7 +1959,7 @@ p {
   border-top: 0;
 }
 .admin-import-help {
-  margin: 0 0 18px;
+  margin: 18px 0 0;
   color: #555d73;
 }
 .admin-import-help summary {
@@ -1975,6 +1975,46 @@ p {
   line-height: 1.65;
   font-family: inherit;
   font-size: .88rem;
+}
+.admin-import-help .field {
+  margin-top: 16px;
+}
+.admin-file-input {
+  padding: 12px;
+  background: #faf9f6;
+  cursor: pointer;
+}
+.admin-document-preview {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #dfd3b7;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.admin-document-preview p {
+  margin: 0;
+}
+.admin-document-preview summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.admin-document-preview ol {
+  max-height: 260px;
+  overflow: auto;
+  padding-left: 24px;
+  line-height: 1.7;
+}
+.admin-document-preview li {
+  margin-bottom: 6px;
+}
+.admin-document-preview pre {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.admin-document-preview .button {
+  justify-self: start;
 }
 .admin-card .field-grid {
   margin-bottom: 0;

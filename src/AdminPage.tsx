@@ -1,6 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { ArrowLeft, ExternalLink, Plus, Save, Trash2 } from "lucide-react";
-import { parseStudyNotes } from "./bulkImport";
+import { parseStudyNotes, type ParseResult } from "./bulkImport";
+import { readStudyFile } from "./readStudyFile";
+import type { DocumentImportResult } from "./studyDocument";
 import type { PublishedCard, PublishedCatalog } from "./catalog";
 import { connectRepository, publishCatalog, type GitHubRepository } from "./githubPublisher";
 import type { Song, UsageLabel } from "./types";
@@ -70,6 +72,12 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
   const [catalog, setCatalog] = useState<PublishedCatalog>();
   const [selectedId, setSelectedId] = useState("");
   const [notesText, setNotesText] = useState("");
+  const [documentPreview, setDocumentPreview] = useState<{
+    name: string;
+    songId: string;
+    result: DocumentImportResult;
+  }>();
+  const [readingFile, setReadingFile] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -145,6 +153,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     setRepo(undefined);
     setCatalog(undefined);
     setSha("");
+    setDocumentPreview(undefined);
     setDirty(false);
   }
 
@@ -173,6 +182,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     const song = blankSong();
     setCatalog({ ...catalog, songs: [...catalog.songs, song] });
     setSelectedId(song.id);
+    setDocumentPreview(undefined);
     setDirty(true);
   }
 
@@ -186,6 +196,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
       cards: catalog.cards.filter((card) => card.songId !== selectedId),
     });
     setSelectedId(songs[0]?.id ?? "");
+    setDocumentPreview(undefined);
     setDirty(true);
   }
 
@@ -201,17 +212,12 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     setDirty(true);
   }
 
-  function importNotes() {
-    if (!catalog || !selectedId) return;
-    const result = parseStudyNotes(notesText);
-    if (!result.cards.length) {
-      setError("没有识别出表达。试试“英文表达 — 中文意思”，每行一条。");
-      return;
-    }
+  function addImportedCards(result: ParseResult) {
+    if (!catalog || !selectedId) return 0;
     const existing = new Set(catalog.cards.filter((card) => card.songId === selectedId)
-      .map((card) => `${card.expression.toLowerCase()}\u0000${card.meaning.toLowerCase()}`));
+      .map((card) => card.expression.trim().toLowerCase()));
     const newCards = result.cards.filter((card) => {
-      const key = `${card.expression.toLowerCase()}\u0000${card.meaning.toLowerCase()}`;
+      const key = card.expression.trim().toLowerCase();
       if (existing.has(key)) return false;
       existing.add(key);
       return true;
@@ -219,12 +225,58 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
       ...blankCard(selectedId),
       ...card,
       context: card.context || "主题延伸表达；不作为歌词引用",
+      sourceType: card.expression.trim().toLowerCase() ===
+        catalog.songs.find((song) => song.id === selectedId)?.title.trim().toLowerCase()
+        ? "title" as const : card.sourceType ?? "extension" as const,
     }));
     setCatalog({ ...catalog, cards: [...catalog.cards, ...newCards] });
+    if (newCards.length) setDirty(true);
+    return newCards.length;
+  }
+
+  function importNotes() {
+    if (!catalog || !selectedId) return;
+    const result = parseStudyNotes(notesText);
+    if (!result.cards.length) {
+      setError("没有识别出表达。试试“英文表达 — 中文意思”，每行一条。");
+      return;
+    }
+    const added = addImportedCards(result);
     setNotesText("");
-    setDirty(true);
     setError("");
-    setMessage(`已加入 ${newCards.length} 张表达卡；${result.unrecognized.length} 行未识别。请检查内容后再发布。`);
+    setMessage(`已加入 ${added} 张表达卡；${result.cards.length - added} 张重复卡跳过，${result.unrecognized.length} 行未识别。请检查后再发布。`);
+  }
+
+  async function chooseDocument(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file || !selectedId) return;
+    const songId = selectedId;
+    setDocumentPreview(undefined);
+    setReadingFile(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await readStudyFile(file);
+      if (!result.cards.length) {
+        setError("文档中没有识别到表达卡。请使用“日常表达／偏文学类表达／生词与语感”表格，或每条“英文表达：…／中文意思：…”的格式。");
+        return;
+      }
+      setDocumentPreview({ name: file.name, songId, result });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "读取文档失败");
+    } finally {
+      setReadingFile(false);
+    }
+  }
+
+  function applyDocumentImport() {
+    if (!documentPreview || documentPreview.songId !== selectedId) return;
+    const { result } = documentPreview;
+    const added = addImportedCards(result);
+    setDocumentPreview(undefined);
+    setError("");
+    setMessage(`已加入 ${added} 张表达卡；${result.cards.length - added} 张重复卡跳过，${result.lyricRowsSkipped} 行歌词及译文未导入。请检查后再发布。`);
   }
 
   async function publish(event: FormEvent) {
@@ -288,7 +340,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
           {catalog.songs.length === 0 && (
             <div className="panel admin-start-guide">
               <h2>从第一首正式课程开始</h2>
-              <p>点「新建歌曲课程」，填写歌名、官方歌曲链接和本课导语；再添加表达卡，或一次粘贴已有的学习笔记。检查内容后点页面底部的「发布课程」，学习者才会看到。</p>
+              <p>点「新建歌曲课程」，填写歌名、官方歌曲链接和本课导语；再选择学习文档导入表达卡。检查内容后点页面底部的「发布课程」，学习者才会看到。</p>
             </div>
           )}
           <div className="admin-layout">
@@ -296,7 +348,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
               <div className="section-heading"><div><span className="eyebrow">SONG LIBRARY</span><h2>歌曲课程</h2></div></div>
               {catalog.songs.map((song) => (
                 <button key={song.id} className={`admin-song-item ${selectedId === song.id ? "selected" : ""}`}
-                  onClick={() => { setSelectedId(song.id); setNotesText(""); setError(""); }}>
+                  onClick={() => { setSelectedId(song.id); setNotesText(""); setDocumentPreview(undefined); setError(""); }}>
                   <strong>{song.title || "未命名歌曲"}</strong>
                   <small>{catalog.cards.filter((card) => card.songId === song.id).length} 张表达卡</small>
                 </button>
@@ -333,8 +385,8 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
                           <label className="field"><span>中文意思 *</span><input value={card.meaning} onChange={(event) => updateCard(card.id, { meaning: event.target.value })} /></label>
                         </div>
                         <div className="field-grid">
-                          <label className="field"><span>来源类型</span><select value={card.sourceType ?? "extension"} onChange={(event) => updateCard(card.id, { sourceType: event.target.value as "title" | "extension" })}>
-                            <option value="title">歌名表达</option><option value="extension">主题延伸（非歌词引用）</option>
+                          <label className="field"><span>来源类型</span><select value={card.sourceType ?? "extension"} onChange={(event) => updateCard(card.id, { sourceType: event.target.value as "title" | "song" | "extension" })}>
+                            <option value="title">歌名表达</option><option value="song">歌曲学习表达</option><option value="extension">主题延伸（非歌词引用）</option>
                           </select></label>
                           <label className="field"><span>使用标签</span><select value={card.label} onChange={(event) => updateCard(card.id, { label: event.target.value as UsageLabel })}>
                             <option>日常可用</option><option>偏文学化</option><option>待确认</option>
@@ -349,14 +401,34 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
                     ))}
                   </section>
                   <section className="panel form-panel">
-                    <div className="section-heading"><div><span className="eyebrow">BULK PASTE</span><h2>批量导入表达</h2></div></div>
-                    <p className="helper">可以一次粘贴多条已有笔记。系统会识别表达、释义、场景、例句和备注；导入后请逐张检查，再发布课程。</p>
+                    <div className="section-heading"><div><span className="eyebrow">DOCUMENT IMPORT</span><h2>导入学习文档</h2></div></div>
+                    <p className="helper">选择 .txt、.md 或 .docx 文档。系统会提取表达学习笔记，先预览，再加入这首歌的草稿；逐行歌词和译文会跳过。原文件只在当前浏览器读取，确认后的表达卡会在发布时写入 GitHub。</p>
+                    <label className="field"><span>选择文档</span>
+                      <input className="admin-file-input" type="file" accept=".txt,.md,.docx" onChange={(event) => void chooseDocument(event)} disabled={readingFile} />
+                    </label>
+                    {readingFile && <p className="helper" role="status">正在读取文档…</p>}
+                    {documentPreview && documentPreview.songId === selectedId && (
+                      <div className="admin-document-preview">
+                        <strong>{documentPreview.name}</strong>
+                        <p>识别到 {documentPreview.result.cards.length} 张表达卡；跳过 {documentPreview.result.lyricRowsSkipped} 行歌词及译文。
+                          {documentPreview.result.unrecognized.length > 0 && ` 另有 ${documentPreview.result.unrecognized.length} 行需要手动检查。`}</p>
+                        <details>
+                          <summary>查看识别到的表达</summary>
+                          <ol>{documentPreview.result.cards.map((card, index) =>
+                            <li key={`${card.expression}-${index}`}><strong>{card.expression}</strong> — {card.meaning}</li>)}</ol>
+                        </details>
+                        {documentPreview.result.unrecognized.length > 0 && (
+                          <details><summary>查看未识别的行</summary><pre>{documentPreview.result.unrecognized.join("\n")}</pre></details>
+                        )}
+                        <button className="button primary" onClick={applyDocumentImport}>确认加入这首歌的草稿</button>
+                      </div>
+                    )}
                     <details className="admin-import-help">
-                      <summary>查看粘贴格式示例</summary>
-                      <pre>{"英文表达：shake it off\n中文意思：摆脱烦心事\n使用场景：工作不顺时鼓励自己\n英文例句：I'll shake it off and try again.\n备注：例句请用自己的话编写\n\n英文表达：bounce back\n中文意思：恢复状态"}</pre>
+                      <summary>也可以直接粘贴表达笔记</summary>
+                      <p className="helper">每条写“英文表达：…”和“中文意思：…”，其他字段可选。</p>
+                      <label className="field"><span>表达学习笔记</span><textarea value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder={"英文表达：…\n中文意思：…\n使用场景：…\n英文例句：…\n备注：…"} /></label>
+                      <button className="button subtle" onClick={importNotes} disabled={!notesText.trim()}>识别并加入表达卡</button>
                     </details>
-                    <label className="field"><span>表达学习笔记</span><textarea value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder={"英文表达：…\n中文意思：…\n使用场景：…\n英文例句：…\n备注：…"} /></label>
-                    <button className="button subtle" onClick={importNotes} disabled={!notesText.trim()}>识别并加入表达卡</button>
                   </section>
                 </>
               ) : (

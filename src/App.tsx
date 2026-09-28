@@ -752,7 +752,7 @@ function SongDetail({
                   <span>
                     {card.expression}
                     {card.sourceType && (
-                      <small> · {card.sourceType === "title" ? "歌名表达" : "主题延伸"}</small>
+                      <small> · {card.sourceType === "title" ? "歌名表达" : card.sourceType === "song" ? "歌曲学习表达" : "主题延伸"}</small>
                     )}
                   </span>
                   <ChevronRight size={16} />
@@ -925,7 +925,7 @@ function CardDetail({
         </span>
         {card.sourceType && (
           <span className="tag">
-            {card.sourceType === "title" ? "歌名表达" : "主题延伸（非歌词引用）"}
+            {card.sourceType === "title" ? "歌名表达" : card.sourceType === "song" ? "歌曲学习表达" : "主题延伸（非歌词引用）"}
           </span>
         )}
         <span className="eyebrow">EXPRESSION CARD</span>
