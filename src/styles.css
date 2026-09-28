@@ -1892,8 +1892,38 @@ p {
   color: #565d72;
   font-size: .9rem;
 }
-.admin-status .button {
+.admin-status-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-left: auto;
+}
+.admin-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 16px;
+  color: #565d72;
+  font-size: .9rem;
+}
+.admin-remember input {
+  width: auto;
+}
+.admin-publish-prompt {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  background: #fff8e9;
+  border-color: #ead9b6;
+}
+.admin-publish-prompt p {
+  margin: 4px 0 0;
+  color: #666b7e;
 }
 .admin-start-guide {
   padding: 22px 26px;
@@ -2013,8 +2043,11 @@ p {
   overflow: auto;
   white-space: pre-wrap;
 }
-.admin-document-preview .button {
-  justify-self: start;
+.admin-document-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 .admin-card .field-grid {
   margin-bottom: 0;

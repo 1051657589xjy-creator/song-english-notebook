@@ -54,6 +54,7 @@ import {
 } from "./types";
 import BulkImportPage from "./BulkImportPage";
 import AdminPage from "./AdminPage";
+import { hasStoredAdminToken } from "./adminAuth";
 import { withCatalog } from "./catalog";
 
 const id = () => crypto.randomUUID();
@@ -1523,7 +1524,7 @@ export default function App() {
       .then((loaded) => {
         dataRef.current = loaded;
         setData(loaded);
-        if (routeNow() === "/" && sessionStorage.getItem("songbook-admin-token")) go("/admin");
+        if (routeNow() === "/" && hasStoredAdminToken()) go("/admin");
       })
       .catch((e) =>
         setStorageError(e instanceof Error ? e.message : "无法读取浏览器存储"),
@@ -1587,7 +1588,7 @@ export default function App() {
     segments[0] === "cards"
       ? data.cards.find((item) => item.id === segments[1])
       : undefined;
-  const adminSession = Boolean(sessionStorage.getItem("songbook-admin-token"));
+  const adminSession = hasStoredAdminToken();
   const privateEditorRoute =
     route === "/songs/new" ||
     route === "/songs/bulk" ||

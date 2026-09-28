@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { ArrowLeft, ExternalLink, Plus, Save, Trash2 } from "lucide-react";
 import { parseStudyNotes, type ParseResult } from "./bulkImport";
+import { rememberedTokenKey, sessionTokenKey, storedAdminToken } from "./adminAuth";
 import { readStudyFile } from "./readStudyFile";
 import type { DocumentImportResult } from "./studyDocument";
 import type { PublishedCard, PublishedCatalog } from "./catalog";
@@ -8,7 +9,6 @@ import { connectRepository, publishCatalog, type GitHubRepository } from "./gith
 import type { Song, UsageLabel } from "./types";
 
 const repoKey = "songbook-admin-repository";
-const tokenKey = "songbook-admin-token";
 const draftKey = (repo: GitHubRepository) =>
   `songbook-admin-draft:${repo.owner.toLowerCase()}/${repo.name.toLowerCase()}`;
 const timestamp = () => new Date().toISOString();
@@ -66,7 +66,8 @@ function validateCatalog(catalog: PublishedCatalog, rightsConfirmed: boolean) {
 
 export default function AdminPage({ onPublic }: { onPublic: () => void }) {
   const [repoUrl, setRepoUrl] = useState(() => localStorage.getItem(repoKey) || repositoryHint);
-  const [token, setToken] = useState(() => sessionStorage.getItem(tokenKey) || "");
+  const [token, setToken] = useState(storedAdminToken);
+  const [rememberLogin, setRememberLogin] = useState(() => Boolean(localStorage.getItem(rememberedTokenKey)));
   const [repo, setRepo] = useState<GitHubRepository>();
   const [sha, setSha] = useState("");
   const [catalog, setCatalog] = useState<PublishedCatalog>();
@@ -84,7 +85,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function connect(url = repoUrl, accessToken = token) {
+  async function connect(url = repoUrl, accessToken = token, remember = rememberLogin) {
     setBusy(true);
     setError("");
     setMessage("");
@@ -121,19 +122,27 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
       setSelectedId(workingCatalog.songs[0]?.id ?? "");
       setNotesText(restoredNotes);
       setDirty(hasDraft);
-      sessionStorage.setItem(tokenKey, accessToken.trim());
+      sessionStorage.setItem(sessionTokenKey, accessToken.trim());
+      if (remember) localStorage.setItem(rememberedTokenKey, accessToken.trim());
+      else localStorage.removeItem(rememberedTokenKey);
+      setRememberLogin(remember);
       localStorage.setItem(repoKey, `https://github.com/${connected.repo.owner}/${connected.repo.name}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "连接 GitHub 失败");
+      if (cause instanceof Error && /GitHub 返回 401/.test(cause.message)) {
+        sessionStorage.removeItem(sessionTokenKey);
+        localStorage.removeItem(rememberedTokenKey);
+        setRememberLogin(false);
+      }
     } finally {
       setBusy(false);
     }
   }
 
   useEffect(() => {
-    const savedToken = sessionStorage.getItem(tokenKey);
+    const savedToken = storedAdminToken();
     const savedRepo = localStorage.getItem(repoKey) || repositoryHint;
-    if (savedToken && savedRepo) void connect(savedRepo, savedToken);
+    if (savedToken && savedRepo) void connect(savedRepo, savedToken, Boolean(localStorage.getItem(rememberedTokenKey)));
     // Restore only once on entering the admin page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -148,13 +157,31 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
   }, [repo, catalog, sha, dirty, notesText]);
 
   function disconnect() {
-    sessionStorage.removeItem(tokenKey);
+    sessionStorage.removeItem(sessionTokenKey);
+    localStorage.removeItem(rememberedTokenKey);
     setToken("");
+    setRememberLogin(false);
     setRepo(undefined);
     setCatalog(undefined);
     setSha("");
     setDocumentPreview(undefined);
     setDirty(false);
+  }
+
+  function rememberThisBrowser() {
+    try {
+      localStorage.setItem(rememberedTokenKey, token.trim());
+      setRememberLogin(true);
+      setMessage("这台浏览器已记住管理登录。点“退出管理”会清除保存的令牌。");
+    } catch {
+      setError("这台浏览器无法保存登录信息，请检查浏览器存储设置。");
+    }
+  }
+
+  function stopRemembering() {
+    localStorage.removeItem(rememberedTokenKey);
+    setRememberLogin(false);
+    setMessage("已取消记住；当前标签页仍可继续管理。");
   }
 
   function updateSong(changes: Partial<Song>) {
@@ -212,8 +239,8 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     setDirty(true);
   }
 
-  function addImportedCards(result: ParseResult) {
-    if (!catalog || !selectedId) return 0;
+  function prepareImportedCards(result: ParseResult) {
+    if (!catalog || !selectedId) return undefined;
     const existing = new Set(catalog.cards.filter((card) => card.songId === selectedId)
       .map((card) => card.expression.trim().toLowerCase()));
     const newCards = result.cards.filter((card) => {
@@ -229,9 +256,18 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
         catalog.songs.find((song) => song.id === selectedId)?.title.trim().toLowerCase()
         ? "title" as const : card.sourceType ?? "extension" as const,
     }));
-    setCatalog({ ...catalog, cards: [...catalog.cards, ...newCards] });
-    if (newCards.length) setDirty(true);
-    return newCards.length;
+    return {
+      nextCatalog: { ...catalog, cards: [...catalog.cards, ...newCards] },
+      added: newCards.length,
+    };
+  }
+
+  function addImportedCards(result: ParseResult) {
+    const prepared = prepareImportedCards(result);
+    if (!prepared) return 0;
+    setCatalog(prepared.nextCatalog);
+    if (prepared.added) setDirty(true);
+    return prepared.added;
   }
 
   function importNotes() {
@@ -260,11 +296,13 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
       const result = await readStudyFile(file);
       if (!result.cards.length) {
         setError("文档中没有识别到表达卡。请使用“日常表达／偏文学类表达／生词与语感”表格，或每条“英文表达：…／中文意思：…”的格式。");
+        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
       setDocumentPreview({ name: file.name, songId, result });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "读取文档失败");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setReadingFile(false);
     }
@@ -276,29 +314,58 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     const added = addImportedCards(result);
     setDocumentPreview(undefined);
     setError("");
-    setMessage(`已加入 ${added} 张表达卡；${result.cards.length - added} 张重复卡跳过，${result.lyricRowsSkipped} 行歌词及译文未导入。请检查后再发布。`);
+    setMessage(`已生成课程草稿：新增 ${added} 张表达卡，跳过 ${result.cards.length - added} 张重复卡。请点“立即发布课程”，学习者才会看到。`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function publish(event: FormEvent) {
-    event.preventDefault();
-    if (!repo || !catalog || !sha) return;
-    const problem = validateCatalog(catalog, rightsConfirmed);
-    if (problem) { setError(problem); return; }
+  async function publishDocumentImport() {
+    if (!documentPreview || documentPreview.songId !== selectedId) return;
+    const prepared = prepareImportedCards(documentPreview.result);
+    if (!prepared) return;
+    const success = await publishCurrent(
+      prepared.nextCatalog,
+      `课程已生成并提交 GitHub：新增 ${prepared.added} 张表达卡。Pages 构建完成后刷新学习界面即可看到。`,
+    );
+    if (success) setDocumentPreview(undefined);
+  }
+
+  async function publishCurrent(nextCatalog = catalog, successMessage = "课程已提交到 GitHub。Pages 会自动构建；完成后，刷新公开网站即可看到更新。") {
+    if (!repo || !nextCatalog || !sha) return false;
+    if (nextCatalog !== catalog) {
+      setCatalog(nextCatalog);
+      setDirty(true);
+    }
+    const problem = validateCatalog(nextCatalog, rightsConfirmed);
+    if (problem) {
+      setError(problem);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return false;
+    }
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const nextSha = await publishCatalog(repo, token, catalog, sha);
+      const nextSha = await publishCatalog(repo, token, nextCatalog, sha);
       localStorage.removeItem(draftKey(repo));
       setSha(nextSha);
       setDirty(false);
       setNotesText("");
-      setMessage("课程已提交到 GitHub。Pages 会自动构建；完成后，刷新公开网站即可看到更新。");
+      setMessage(successMessage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "发布失败");
+      setDirty(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return false;
     } finally {
       setBusy(false);
     }
+  }
+
+  function publish(event: FormEvent) {
+    event.preventDefault();
+    void publishCurrent();
   }
 
   const selected = catalog?.songs.find((song) => song.id === selectedId);
@@ -316,12 +383,15 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
       {!repo || !catalog ? (
         <form className="panel form-panel admin-connect" onSubmit={(event) => { event.preventDefault(); void connect(); }}>
           <h2>连接你的 GitHub 仓库</h2>
-          <p>管理权限由 GitHub 仓库的写入权限决定。令牌仅保存在此标签页，不会写进网站或仓库。</p>
+          <p>管理权限由 GitHub 仓库的写入权限决定。你可以选择在自己的浏览器记住令牌，下次自动进入后台；令牌不会写进网站或仓库。</p>
           <label className="field"><span>具体仓库地址</span>
             <input value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} placeholder="https://github.com/用户名/仓库名" />
           </label>
           <label className="field"><span>GitHub 访问令牌</span>
             <input type="password" autoComplete="off" value={token} onChange={(event) => setToken(event.target.value)} placeholder="需要该仓库的 Contents 写入权限" />
+          </label>
+          <label className="admin-remember"><input type="checkbox" checked={rememberLogin} onChange={(event) => setRememberLogin(event.target.checked)} />
+            在这台浏览器记住管理登录（仅限自己的设备）
           </label>
           <p className="helper">
             <a className="inline-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建细粒度令牌 <ExternalLink size={14} /></a>
@@ -334,9 +404,22 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
         <>
           <div className="panel admin-status">
             <span>已连接：{repo.user} · {repo.owner}/{repo.name}</span>
-            <span>{notesText.trim() ? "有尚未识别的笔记" : dirty ? "有未发布改动" : "课程与仓库同步"}</span>
-            <button className="button text small" onClick={disconnect}>退出管理</button>
+            <span>{notesText.trim() ? "有尚未识别的笔记" : dirty ? "有未发布课程草稿" : "课程与仓库同步"}</span>
+            <div className="admin-status-actions">
+              {rememberLogin
+                ? <button className="button text small" onClick={stopRemembering}>取消记住此设备</button>
+                : <button className="button text small" onClick={rememberThisBrowser}>记住此设备</button>}
+              <button className="button text small" onClick={disconnect}>退出管理</button>
+            </div>
           </div>
+          {dirty && (
+            <div className="panel admin-publish-prompt">
+              <div><strong>课程草稿尚未发布</strong><p>现在只有这台浏览器能看到改动；发布后学习者才能看到。</p></div>
+              <button className="button primary" onClick={() => void publishCurrent()} disabled={busy}>{busy ? "正在发布…" : "立即发布课程"}</button>
+            </div>
+          )}
+          {error && <p className="error admin-feedback" role="alert">{error}</p>}
+          {message && <p className="admin-feedback" role="status">{message}</p>}
           {catalog.songs.length === 0 && (
             <div className="panel admin-start-guide">
               <h2>从第一首正式课程开始</h2>
@@ -412,6 +495,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
                         <strong>{documentPreview.name}</strong>
                         <p>识别到 {documentPreview.result.cards.length} 张表达卡；跳过 {documentPreview.result.lyricRowsSkipped} 行歌词及译文。
                           {documentPreview.result.unrecognized.length > 0 && ` 另有 ${documentPreview.result.unrecognized.length} 行需要手动检查。`}</p>
+                        <p>选“生成并发布课程”，学习者才会看到；选“只加入草稿”，可以先逐张编辑。</p>
                         <details>
                           <summary>查看识别到的表达</summary>
                           <ol>{documentPreview.result.cards.map((card, index) =>
@@ -420,7 +504,10 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
                         {documentPreview.result.unrecognized.length > 0 && (
                           <details><summary>查看未识别的行</summary><pre>{documentPreview.result.unrecognized.join("\n")}</pre></details>
                         )}
-                        <button className="button primary" onClick={applyDocumentImport}>确认加入这首歌的草稿</button>
+                        <div className="admin-document-actions">
+                          <button className="button primary" onClick={() => void publishDocumentImport()} disabled={busy}>{busy ? "正在发布…" : "生成并发布课程"}</button>
+                          <button className="button subtle" onClick={applyDocumentImport} disabled={busy}>只加入草稿</button>
+                        </div>
                       </div>
                     )}
                     <details className="admin-import-help">
@@ -448,8 +535,6 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
             </div>
             <button className="button primary" type="submit" disabled={busy || !dirty}><Save size={17} /> {busy ? "正在发布…" : "发布课程"}</button>
           </form>
-          {error && <p className="error admin-feedback" role="alert">{error}</p>}
-          {message && <p className="admin-feedback" role="status">{message}</p>}
           <a className="inline-link" href={`https://github.com/${repo.owner}/${repo.name}/actions`} target="_blank" rel="noopener noreferrer">查看 GitHub 构建进度 <ExternalLink size={14} /></a>
         </>
       )}
