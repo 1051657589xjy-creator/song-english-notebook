@@ -1873,3 +1873,128 @@ p {
     flex-direction: column;
   }
 }
+
+.admin-connect {
+  max-width: 660px;
+  padding: 30px;
+}
+.admin-connect p,
+.admin-publish p {
+  color: #73798b;
+}
+.admin-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 16px 22px;
+  margin-bottom: 20px;
+  color: #565d72;
+  font-size: .9rem;
+}
+.admin-status .button {
+  margin-left: auto;
+}
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.admin-song-list {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+.admin-song-list .section-heading {
+  margin-bottom: 8px;
+}
+.admin-song-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e5e1db;
+  border-radius: 10px;
+  background: #faf9f6;
+  padding: 12px;
+  color: #282d46;
+}
+.admin-song-item.selected {
+  border-color: #c6a568;
+  background: #fff8e9;
+}
+.admin-song-item small {
+  color: #7c8191;
+}
+.admin-editor {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.admin-editor .form-panel {
+  padding: 25px;
+}
+.admin-editor .section-heading {
+  margin-bottom: 18px;
+}
+.admin-card {
+  border-top: 1px solid #e8e5df;
+  padding: 24px 0 8px;
+}
+.admin-card:first-of-type {
+  border-top: 0;
+}
+.admin-card .field-grid {
+  margin-bottom: 0;
+}
+.admin-publish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  margin: 20px 0 12px;
+}
+.admin-publish h2 {
+  margin-bottom: 6px;
+}
+.admin-publish p {
+  margin: 0;
+}
+.admin-publish .button {
+  flex: none;
+}
+.admin-rights {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: .9rem;
+}
+.admin-feedback {
+  padding: 12px 16px;
+  border-radius: 9px;
+  background: #ecf6ed;
+}
+.admin-feedback.error {
+  background: #fff0ee;
+}
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+  .admin-song-list {
+    position: static;
+  }
+}
+@media (max-width: 600px) {
+  .admin-publish {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-editor .form-panel,
+  .admin-connect {
+    padding: 20px;
+  }
+}

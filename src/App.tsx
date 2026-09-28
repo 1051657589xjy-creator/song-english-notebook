@@ -53,6 +53,7 @@ import {
   type UsageLabel,
 } from "./types";
 import BulkImportPage from "./BulkImportPage";
+import AdminPage from "./AdminPage";
 import { withCatalog } from "./catalog";
 
 const id = () => crypto.randomUUID();
@@ -1535,6 +1536,7 @@ export default function App() {
       .then((loaded) => {
         dataRef.current = loaded;
         setData(loaded);
+        if (routeNow() === "/" && sessionStorage.getItem("songbook-admin-token")) go("/admin");
       })
       .catch((e) =>
         setStorageError(e instanceof Error ? e.message : "无法读取浏览器存储"),
@@ -1598,9 +1600,26 @@ export default function App() {
     segments[0] === "cards"
       ? data.cards.find((item) => item.id === segments[1])
       : undefined;
+  const adminSession = Boolean(sessionStorage.getItem("songbook-admin-token"));
+  const privateEditorRoute =
+    route === "/songs/new" ||
+    route === "/songs/bulk" ||
+    (segments[0] === "songs" && ["bulk", "edit"].includes(segments[2] ?? "")) ||
+    (segments[0] === "songs" && segments[2] === "cards" && segments[3] === "new") ||
+    (segments[0] === "cards" && segments[2] === "edit");
   let page: ReactNode;
   let back: { label: string; path: string } | undefined;
-  if (route === "/") page = <Home data={data} />;
+  if (route === "/admin") page = <AdminPage onPublic={() => go("/")} />;
+  else if (privateEditorRoute && !adminSession)
+    page = (
+      <Empty
+        icon={<CircleHelp />}
+        title="这个页面用于课程管理"
+        text="学习者可以直接打开歌曲课程、表达卡和复习页面。"
+        action={<button className="button primary" onClick={() => go("/songs")}>查看歌曲课程</button>}
+      />
+    );
+  else if (route === "/") page = <Home data={data} />;
   else if (route === "/songs")
     page = (
       <div className="content-page">
