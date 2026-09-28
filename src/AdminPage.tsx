@@ -157,6 +157,14 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
   }, [repo, catalog, sha, dirty, notesText]);
 
   function disconnect() {
+    if (repo && catalog && sha && dirty) {
+      try {
+        localStorage.setItem(draftKey(repo), JSON.stringify({ sha, catalog, notesText }));
+      } catch {
+        setError("浏览器无法保存草稿，请先检查存储空间，再更换令牌。");
+        return;
+      }
+    }
     sessionStorage.removeItem(sessionTokenKey);
     localStorage.removeItem(rememberedTokenKey);
     setToken("");
@@ -166,6 +174,8 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
     setSha("");
     setDocumentPreview(undefined);
     setDirty(false);
+    setError("");
+    setMessage("课程草稿已保留在这个浏览器里。用有 Contents 读写权限的令牌重新连接后即可继续发布。");
   }
 
   function rememberThisBrowser() {
@@ -399,6 +409,7 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
           </p>
           <button className="button primary" disabled={busy} type="submit">{busy ? "正在验证…" : "进入管理后台"}</button>
           {error && <p className="error" role="alert">{error}</p>}
+          {message && <p className="admin-feedback" role="status">{message}</p>}
         </form>
       ) : (
         <>
@@ -418,7 +429,13 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
               <button className="button primary" onClick={() => void publishCurrent()} disabled={busy}>{busy ? "正在发布…" : "立即发布课程"}</button>
             </div>
           )}
-          {error && <p className="error admin-feedback" role="alert">{error}</p>}
+          {error && <div className="error admin-feedback" role="alert">
+            <p>{error}</p>
+            {error.startsWith("GitHub 返回 403：发布被拒绝") && <div className="admin-error-actions">
+              <a className="inline-link" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">检查 GitHub 令牌权限 <ExternalLink size={14} /></a>
+              <button className="button subtle small" onClick={disconnect}>更换令牌（保留草稿）</button>
+            </div>}
+          </div>}
           {message && <p className="admin-feedback" role="status">{message}</p>}
           {catalog.songs.length === 0 && (
             <div className="panel admin-start-guide">

@@ -28,12 +28,24 @@ async function github<T>(path: string, token: string, init?: RequestInit): Promi
     },
   });
   if (!response.ok) {
+    const githubMessage = await response.json()
+      .then((body: unknown) => body && typeof body === "object" && "message" in body && typeof body.message === "string"
+        ? body.message : "")
+      .catch(() => "");
+    const publishing = init?.method?.toUpperCase() === "PUT";
+    const rateLimited = response.status === 403 && (
+      response.headers.get("x-ratelimit-remaining") === "0" ||
+      /rate limit/i.test(githubMessage)
+    );
     const detail = response.status === 401 ? "令牌无效或已过期"
-      : response.status === 403 ? "没有访问或写入该仓库的权限"
+      : rateLimited ? "GitHub 暂时限制了请求，请稍后再试"
+      : response.status === 403 && publishing
+        ? "发布被拒绝。请检查令牌是否选中了这个仓库，且 Repository permissions → Contents 为 Read and write"
+      : response.status === 403 ? "没有访问该仓库的权限"
       : response.status === 404 ? "找不到该仓库或课程文件"
       : response.status === 409 ? "仓库内容已变化，请重新连接后再发布"
       : "请检查 GitHub 仓库和网络连接";
-    throw new Error(`GitHub 返回 ${response.status}：${detail}`);
+    throw new Error(`GitHub 返回 ${response.status}：${detail}${githubMessage ? `。GitHub 提示：${githubMessage}` : ""}`);
   }
   return response.json() as Promise<T>;
 }

@@ -2084,6 +2084,16 @@ p {
 .admin-feedback.error {
   background: #fff0ee;
 }
+.admin-feedback.error p {
+  margin: 0;
+}
+.admin-error-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 10px;
+}
 @media (max-width: 900px) {
   .admin-layout {
     grid-template-columns: 1fr;
