@@ -274,10 +274,12 @@ function Home({ data }: { data: AppData }) {
             <br />
             <em>学会自己的表达。</em>
           </h1>
-          <p>从 Taylor Swift 的歌曲出发，听歌、学表达，再用自己的话说出来。</p>
+          <p>{data.songs.length
+            ? "从 Taylor Swift 的歌曲出发，听歌、学表达，再用自己的话说出来。"
+            : "歌曲课程正在整理中。发布后，你可以在这里学习表达并定期复习。"}</p>
           <div className="hero-actions">
             <button className="button gold" onClick={() => go("/songs")}>
-              <BookOpen size={18} /> 开始学习
+              <BookOpen size={18} /> {data.songs.length ? "开始学习" : "查看课程"}
             </button>
             <button
               className="button ghost-light"
@@ -355,16 +357,8 @@ function Home({ data }: { data: AppData }) {
           ) : (
             <Empty
               icon={<Music2 />}
-              title="从第一首歌开始"
-              text="添加歌名，粘贴你手边的歌词，就可以开始摘录表达。"
-              action={
-                <button
-                  className="button primary small"
-                  onClick={() => go("/songs/new")}
-                >
-                  添加歌曲
-                </button>
-              }
+              title="课程正在准备中"
+              text="站长还没有发布正式课程。稍后回来，就能从喜欢的歌开始学英文。"
             />
           )}
         </section>
@@ -382,7 +376,7 @@ function Home({ data }: { data: AppData }) {
           </div>
           <button
             className="link-button"
-            onClick={() => go(data.songs.length ? "/songs" : "/songs/new")}
+            onClick={() => go("/songs")}
           >
             去看课程 <ArrowRight size={16} />
           </button>
@@ -1103,8 +1097,8 @@ function Review({
           <div className="complete-icon">
             <Check size={30} />
           </div>
-          <span className="eyebrow">ALL DONE FOR TODAY</span>
-          <h2>今天的复习完成了</h2>
+          <span className="eyebrow">{data.cards.length ? "ALL DONE FOR TODAY" : "COMING SOON"}</span>
+          <h2>{data.cards.length ? "今天的复习完成了" : "课程发布后就能开始复习"}</h2>
           {todayEvents.length ? (
             <p>
               今天复习了 {todayEvents.length} 张：会了{" "}
@@ -1113,7 +1107,9 @@ function Review({
               {todayEvents.filter((e) => e.grade === "forgot").length} 张。
             </p>
           ) : (
-            <p>今天没有到期的表达卡。新建的卡片会从今天开始复习。</p>
+            <p>{data.cards.length
+              ? "今天没有到期的表达卡。新卡片会从今天开始复习。"
+              : "站长正在整理课程表达。发布后，表达卡会自动加入复习计划。"}</p>
           )}
           <button className="button subtle" onClick={() => go("/cards")}>
             看看我的表达卡
@@ -1279,17 +1275,8 @@ function PracticePage({
           ) : (
             <Empty
               icon={<BookOpen />}
-              title="先收藏一张表达卡"
-              text="造句练习会从你已学的表达中抽取。"
-              action={
-                <button
-                  className="button primary small"
-                  type="button"
-                  onClick={() => go("/songs")}
-                >
-                  去看歌曲
-                </button>
-              }
+              title="课程发布后就能练习"
+              text="造句练习会从已发布的表达卡中抽取。"
             />
           )}
         </form>
@@ -1627,7 +1614,9 @@ export default function App() {
           <div>
             <span className="eyebrow">MY SONGBOOK</span>
             <h1>歌曲课程</h1>
-            <p>选一首歌开始听，课程表达已经为你准备好。</p>
+            <p>{data.songs.length
+              ? "选一首歌开始听，课程表达已经为你准备好。"
+              : "站长正在整理歌曲和学习内容。正式课程发布后会出现在这里。"}</p>
           </div>
         </div>
         {data.songs.length ? (
@@ -1656,16 +1645,8 @@ export default function App() {
         ) : (
           <Empty
             icon={<Music2 />}
-            title="还没有添加歌曲"
-            text="粘贴你想学习的歌词，保留每一行原来的样子。"
-            action={
-              <button
-                className="button primary"
-                onClick={() => go("/songs/new")}
-              >
-                添加第一首歌
-              </button>
-            }
+            title="课程正在准备中"
+            text="目前还没有正式发布的歌曲课程。"
           />
         )}
       </div>
@@ -1864,13 +1845,8 @@ export default function App() {
         ) : (
           <Empty
             icon={<BookOpen />}
-            title="还没有表达卡"
-            text="打开一首歌，选中歌词或手动输入英文表达。"
-            action={
-              <button className="button primary" onClick={() => go("/songs")}>
-                去看歌曲
-              </button>
-            }
+            title="表达卡即将上线"
+            text="正式课程发布后，这里会显示每首歌的学习表达。"
           />
         )}
       </div>

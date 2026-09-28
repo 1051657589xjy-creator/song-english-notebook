@@ -246,6 +246,12 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
             <span>{dirty ? "有未发布改动" : "课程与仓库同步"}</span>
             <button className="button text small" onClick={disconnect}>退出管理</button>
           </div>
+          {catalog.songs.length === 0 && (
+            <div className="panel admin-start-guide">
+              <h2>从第一首正式课程开始</h2>
+              <p>点「新建歌曲课程」，填写歌名、官方歌曲链接和本课导语；再添加表达卡，或一次粘贴已有的学习笔记。检查内容后点页面底部的「发布课程」，学习者才会看到。</p>
+            </div>
+          )}
           <div className="admin-layout">
             <aside className="panel admin-song-list">
               <div className="section-heading"><div><span className="eyebrow">SONG LIBRARY</span><h2>歌曲课程</h2></div></div>
@@ -305,8 +311,12 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
                   </section>
                   <section className="panel form-panel">
                     <div className="section-heading"><div><span className="eyebrow">BULK PASTE</span><h2>批量导入表达</h2></div></div>
-                    <p className="helper">每行一条，例如：shake it off — 摆脱烦心事。导入后先检查每张卡，再发布课程。</p>
-                    <label className="field"><span>表达学习笔记</span><textarea value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder={"英文表达 — 中文意思\nlong story short — 长话短说"} /></label>
+                    <p className="helper">可以一次粘贴多条已有笔记。系统会识别表达、释义、场景、例句和备注；导入后请逐张检查，再发布课程。</p>
+                    <details className="admin-import-help">
+                      <summary>查看粘贴格式示例</summary>
+                      <pre>{"英文表达：shake it off\n中文意思：摆脱烦心事\n使用场景：工作不顺时鼓励自己\n英文例句：I'll shake it off and try again.\n备注：例句请用自己的话编写\n\n英文表达：bounce back\n中文意思：恢复状态"}</pre>
+                    </details>
+                    <label className="field"><span>表达学习笔记</span><textarea value={notesText} onChange={(event) => setNotesText(event.target.value)} placeholder={"英文表达：…\n中文意思：…\n使用场景：…\n英文例句：…\n备注：…"} /></label>
                     <button className="button subtle" onClick={importNotes} disabled={!notesText.trim()}>识别并加入表达卡</button>
                   </section>
                 </>

@@ -1895,6 +1895,19 @@ p {
 .admin-status .button {
   margin-left: auto;
 }
+.admin-start-guide {
+  padding: 22px 26px;
+  margin-bottom: 20px;
+  background: #fff9ed;
+  border-color: #ead9b6;
+}
+.admin-start-guide h2 {
+  margin-bottom: 8px;
+}
+.admin-start-guide p {
+  margin-bottom: 0;
+  color: #666b7e;
+}
 .admin-layout {
   display: grid;
   grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
@@ -1944,6 +1957,24 @@ p {
 }
 .admin-card:first-of-type {
   border-top: 0;
+}
+.admin-import-help {
+  margin: 0 0 18px;
+  color: #555d73;
+}
+.admin-import-help summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.admin-import-help pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f7f5f1;
+  border-radius: 10px;
+  padding: 16px;
+  line-height: 1.65;
+  font-family: inherit;
+  font-size: .88rem;
 }
 .admin-card .field-grid {
   margin-bottom: 0;
