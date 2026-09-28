@@ -1,0 +1,218 @@
+import { localDay, type AppData, type Card, type Song } from "./types";
+
+// Editor-owned lessons. Add licensed lyrics and imagery only after obtaining the
+// rights to publish them; the initial lessons use original explanations instead.
+const publishedAt = "2026-09-28T00:00:00.000Z";
+
+export const catalogSongs: Song[] = [
+  {
+    id: "lesson-shake-it-off",
+    title: "Shake It Off",
+    artist: "Taylor Swift",
+    url: "https://www.youtube.com/watch?v=nfWlot6h_JM",
+    lyrics: "",
+    lessonIntro:
+      "先听这首歌，留意标题 shake it off 想表达的情绪。回到本站学习它在日常交流中的用法，再比较两个与应对挫折有关的延伸表达。下方的例句由本站编写，不是歌词。",
+    curated: true,
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
+  },
+  {
+    id: "lesson-long-story-short",
+    title: "long story short",
+    artist: "Taylor Swift",
+    url: "https://www.youtube.com/watch?v=rqQHa2HcGtM",
+    lyrics: "",
+    lessonIntro:
+      "先听歌，再学习标题里的 long story short：讲一件事时，怎样跳过细节说结果。本课还提供两个表达简洁意思的延伸说法；它们不是对歌词内容的引用。",
+    curated: true,
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
+  },
+  {
+    id: "lesson-begin-again",
+    title: "Begin Again (Taylor’s Version)",
+    artist: "Taylor Swift",
+    url: "https://www.youtube.com/watch?v=dXNZaHuKWNA",
+    lyrics: "",
+    lessonIntro:
+      "听完歌，试着用 begin again 写一句自己的话。本课的两个延伸表达都与重新开始有关，但意思并不相同：一个强调从零开始，一个强调改变旧习惯。",
+    curated: true,
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
+  },
+];
+
+type PublishedCard = Pick<
+  Card,
+  | "id"
+  | "songId"
+  | "expression"
+  | "meaning"
+  | "context"
+  | "scenario"
+  | "label"
+  | "example"
+  | "notes"
+  | "referenceUrl"
+  | "sourceType"
+  | "curated"
+>;
+
+export const catalogCards: PublishedCard[] = [
+  {
+    id: "lesson-shake-it-off-title",
+    songId: "lesson-shake-it-off",
+    expression: "shake it off",
+    meaning: "摆脱烦心事带来的情绪；不让它继续影响自己",
+    context: "歌名表达",
+    scenario: "犯了小错、受了批评，想调整心情继续做事时",
+    label: "日常可用",
+    example: "I made a mistake, but I'll shake it off and try again.",
+    notes: "这里的 it 可以指让你心烦的事。",
+    referenceUrl: "https://dictionary.cambridge.org/us/dictionary/english/shake-off",
+    sourceType: "title",
+    curated: true,
+  },
+  {
+    id: "lesson-shake-it-off-brush-off",
+    songId: "lesson-shake-it-off",
+    expression: "brush something off",
+    meaning: "对某句话或批评不予理会，不认真放在心上",
+    context: "主题延伸表达；不作为歌词引用",
+    scenario: "别人说了不友善的话，你决定不理会时",
+    label: "日常可用",
+    example: "She brushed off the rude comment and kept working.",
+    notes: "brush off 也可表示敷衍或无视别人的意见，语境不同会带有负面意味。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/brush-off",
+    sourceType: "extension",
+    curated: true,
+  },
+  {
+    id: "lesson-shake-it-off-bounce-back",
+    songId: "lesson-shake-it-off",
+    expression: "bounce back",
+    meaning: "遭遇困难或挫折后恢复状态",
+    context: "主题延伸表达；不作为歌词引用",
+    scenario: "经历失败、生病或低落之后重新振作时",
+    label: "日常可用",
+    example: "It took me a week to bounce back after the exam.",
+    notes: "常见搭配：bounce back from a setback。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/bounce-back",
+    sourceType: "extension",
+    curated: true,
+  },
+  {
+    id: "lesson-long-story-short-title",
+    songId: "lesson-long-story-short",
+    expression: "long story short",
+    meaning: "长话短说；省略经过，直接说结果",
+    context: "歌名表达",
+    scenario: "讲一件复杂的事，但只想交代关键结果时",
+    label: "日常可用",
+    example: "Long story short, we missed the train but made it to the show.",
+    notes: "常放在句首，口语中很自然。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/long-story-short",
+    sourceType: "title",
+    curated: true,
+  },
+  {
+    id: "lesson-long-story-short-cut-to-the-chase",
+    songId: "lesson-long-story-short",
+    expression: "cut to the chase",
+    meaning: "直奔主题，直接说重要部分",
+    context: "主题延伸表达；不作为歌词引用",
+    scenario: "会议或对话时间有限，想尽快谈重点时",
+    label: "日常可用",
+    example: "We only have ten minutes, so let's cut to the chase.",
+    notes: "比 long story short 更直接；对人说时要留意语气。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/cut-to-the-chase",
+    sourceType: "extension",
+    curated: true,
+  },
+  {
+    id: "lesson-long-story-short-nutshell",
+    songId: "lesson-long-story-short",
+    expression: "in a nutshell",
+    meaning: "简而言之；只说主要内容",
+    context: "主题延伸表达；不作为歌词引用",
+    scenario: "概括一个计划、观点或情况时",
+    label: "日常可用",
+    example: "In a nutshell, the plan is to practice a little every day.",
+    notes: "可用于口语，也可用于较轻松的书面表达。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/in-a-nutshell",
+    sourceType: "extension",
+    curated: true,
+  },
+  {
+    id: "lesson-begin-again-title",
+    songId: "lesson-begin-again",
+    expression: "begin again",
+    meaning: "重新开始",
+    context: "歌名表达",
+    scenario: "暂停或遇到挫折后，决定再试一次时",
+    label: "日常可用",
+    example: "After a short break, I was ready to begin again.",
+    notes: "begin again 是普通搭配；start again 意思相近。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/start-again",
+    sourceType: "title",
+    curated: true,
+  },
+  {
+    id: "lesson-begin-again-from-scratch",
+    songId: "lesson-begin-again",
+    expression: "start from scratch",
+    meaning: "从零开始，不沿用原有成果",
+    context: "主题延伸表达；不作为歌词引用",
+    scenario: "原来的方案不能用了，必须重新做时",
+    label: "日常可用",
+    example: "The first design failed, so we started from scratch.",
+    notes: "比 begin again 更强调没有现成基础可用。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/from-scratch",
+    sourceType: "extension",
+    curated: true,
+  },
+  {
+    id: "lesson-begin-again-new-leaf",
+    songId: "lesson-begin-again",
+    expression: "turn over a new leaf",
+    meaning: "改掉旧习惯，开始用更好的方式行事",
+    context: "主题延伸表达；不作为歌词引用",
+    scenario: "下决心改变拖延、迟到等旧习惯时",
+    label: "日常可用",
+    example: "I turned over a new leaf and started arriving on time.",
+    notes: "强调行为变好，并非所有‘重新开始’都适用。",
+    referenceUrl: "https://dictionary.cambridge.org/dictionary/english/turn-over-a-new-leaf",
+    sourceType: "extension",
+    curated: true,
+  },
+];
+
+export function withCatalog(data: AppData): AppData {
+  const currentSongs = new Map(data.songs.map((song) => [song.id, song]));
+  const currentCards = new Map(data.cards.map((card) => [card.id, card]));
+  const songIds = new Set(catalogSongs.map((song) => song.id));
+  const cardIds = new Set(catalogCards.map((card) => card.id));
+  return {
+    ...data,
+    songs: [
+      ...catalogSongs.map((song) => ({ ...currentSongs.get(song.id), ...song })),
+      ...data.songs.filter((song) => !songIds.has(song.id)),
+    ],
+    cards: [
+      ...catalogCards.map((card) => {
+        const current = currentCards.get(card.id);
+        return {
+          ...current,
+          ...card,
+          streak: current?.streak ?? 0,
+          nextReview: current?.nextReview ?? localDay(),
+          history: current?.history ?? [],
+          createdAt: current?.createdAt ?? publishedAt,
+          updatedAt: current?.updatedAt ?? publishedAt,
+        } satisfies Card;
+      }),
+      ...data.cards.filter((card) => !cardIds.has(card.id)),
+    ],
+  };
+}
