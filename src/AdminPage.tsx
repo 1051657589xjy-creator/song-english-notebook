@@ -232,7 +232,10 @@ export default function AdminPage({ onPublic }: { onPublic: () => void }) {
           <label className="field"><span>GitHub 访问令牌</span>
             <input type="password" autoComplete="off" value={token} onChange={(event) => setToken(event.target.value)} placeholder="需要该仓库的 Contents 写入权限" />
           </label>
-          <p className="helper">请使用仅授权这个仓库、拥有 Contents 读写权限的细粒度令牌。不要把令牌发给任何人。</p>
+          <p className="helper">
+            <a className="inline-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建细粒度令牌 <ExternalLink size={14} /></a>
+            {" · "}只选这个仓库，授予 Contents 读写权限。令牌请直接填在这里，不要发给任何人。
+          </p>
           <button className="button primary" disabled={busy} type="submit">{busy ? "正在验证…" : "进入管理后台"}</button>
           {error && <p className="error" role="alert">{error}</p>}
         </form>
